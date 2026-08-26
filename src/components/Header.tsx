@@ -9,9 +9,11 @@ import {
   Clock, 
   BellRing, 
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  LogOut,
+  UserCheck
 } from 'lucide-react';
-import { AWSStation } from '../types';
+import { AWSStation, AuthUser } from '../types';
 
 interface HeaderProps {
   onSearchStation?: (query: string) => void;
@@ -21,6 +23,8 @@ interface HeaderProps {
   onToggleSimulation: () => void;
   onRefreshData: () => void;
   anomalyCount: number;
+  currentUser?: AuthUser | null;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSimulation,
   onRefreshData,
   anomalyCount,
+  currentUser,
+  onLogout,
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -197,6 +203,37 @@ export const Header: React.FC<HeaderProps> = ({
             LIVE
           </span>
         </div>
+
+        {/* Current Admin User Badge & Logout Option */}
+        {currentUser && (
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800">
+              <div className="w-6 h-6 rounded-md bg-sky-500/20 text-sky-400 font-mono font-bold text-xs flex items-center justify-center border border-sky-500/30">
+                {currentUser.username.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-bold font-mono text-white leading-tight">
+                  {currentUser.username}
+                </div>
+                <div className="text-[9px] font-mono text-emerald-400 font-semibold leading-tight">
+                  {currentUser.role}
+                </div>
+              </div>
+            </div>
+
+            {onLogout && (
+              <button
+                id="header-logout-btn"
+                onClick={onLogout}
+                title="Logout of SkyGuard AI"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-700/70 hover:border-rose-500/30 text-xs font-medium transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden md:inline text-[11px]">Logout</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

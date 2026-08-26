@@ -9,15 +9,19 @@ import {
   Settings, 
   ShieldAlert, 
   CheckCircle2,
-  Server
+  Server,
+  LogOut,
+  UserCheck
 } from 'lucide-react';
-import { NavigationSection } from '../types';
+import { NavigationSection, AuthUser } from '../types';
 
 interface SidebarProps {
   currentSection: NavigationSection;
   onSelectSection: (section: NavigationSection) => void;
   anomalyCount: number;
   suspiciousCount: number;
+  currentUser?: AuthUser | null;
+  onLogout?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -25,6 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectSection,
   anomalyCount,
   suspiciousCount,
+  currentUser,
+  onLogout,
 }) => {
   const navItems: Array<{
     id: NavigationSection;
@@ -117,8 +123,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </nav>
 
+      {/* User Profile & Logout Box */}
+      {currentUser && (
+        <div className="mx-3 mb-2 p-3 rounded-xl bg-slate-900/90 border border-slate-800/80 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 flex-shrink-0 font-mono font-bold text-xs">
+              {currentUser.username.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono font-bold text-xs text-white truncate">
+                  {currentUser.username}
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  {currentUser.role}
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 truncate block">
+                {currentUser.name}
+              </span>
+            </div>
+          </div>
+
+          {onLogout && (
+            <button
+              id="sidebar-logout-button"
+              onClick={onLogout}
+              title="Logout session"
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700/80 hover:border-rose-500/30 transition-all flex-shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Network Status Footer */}
-      <div className="p-4 m-3 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-2.5">
+      <div className="p-4 m-3 mt-0 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">

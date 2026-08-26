@@ -4,11 +4,14 @@ import {
   AWSStation, 
   AnomalyRecord, 
   StationStatus, 
-  NetworkOverviewStats 
+  NetworkOverviewStats,
+  AuthUser
 } from './types';
 import { STATIONS, INITIAL_ANOMALIES, NETWORK_STATS } from './data/mockData';
+import { authService } from './auth/authService';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
+import { LoginView } from './components/LoginView';
 import { NetworkStats } from './components/NetworkStats';
 import { IndiaMap } from './components/IndiaMap';
 import { RecentAnomalies } from './components/RecentAnomalies';
@@ -25,6 +28,9 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { SettingsView } from './components/SettingsView';
 
 export default function App() {
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+
   const [currentSection, setCurrentSection] = useState<NavigationSection>('dashboard');
   const [stations, setStations] = useState<AWSStation[]>(STATIONS);
   const [anomalies, setAnomalies] = useState<AnomalyRecord[]>(INITIAL_ANOMALIES);
@@ -43,9 +49,23 @@ export default function App() {
   const [isLiveSimulation, setIsLiveSimulation] = useState(true);
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
 
+  const handleLogout = async () => {
+    await authService.logout();
+    setCurrentUser(null);
+    setSelectedStation(null);
+    setSelectedAnomaly(null);
+    setIsStationModalOpen(false);
+    setIsAnomalyModalOpen(false);
+  };
+
+  const handleLoginSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+    handleActionComplete(`Authenticated as ${user.name} (${user.role})`);
+  };
+
   // Live simulation tick (subtle periodic sensor stream jitter to indicate continuous live monitoring)
   useEffect(() => {
-    if (!isLiveSimulation) return;
+    if (!currentUser || !isLiveSimulation) return;
 
     const interval = setInterval(() => {
       setStations((prevStations) =>
@@ -77,7 +97,7 @@ export default function App() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [isLiveSimulation]);
+  }, [currentUser, isLiveSimulation]);
 
   const handleOpenAnomaly = (anomaly: AnomalyRecord) => {
     setSelectedAnomaly(anomaly);
@@ -96,6 +116,11 @@ export default function App() {
     setTimeout(() => setNotificationToast(null), 5000);
   };
 
+  // If not authenticated, present the SkyGuard AI Demo Login Screen
+  if (!currentUser) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#0B111E] text-slate-100 font-sans">
       {/* 1. Persistent Left Navigation Sidebar */}
@@ -104,11 +129,13 @@ export default function App() {
         onSelectSection={(section) => setCurrentSection(section)}
         anomalyCount={stats.anomalyCount}
         suspiciousCount={stats.suspiciousCount}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        {/* 2. Top Header Bar with Live Indicator */}
+        {/* 2. Top Header Bar with Live Indicator & User Controls */}
         <Header
           stations={stations}
           onSelectStation={handleSelectStation}
@@ -118,6 +145,8 @@ export default function App() {
             handleActionComplete('Telemetry cycle refreshed from 48 automatic weather stations.');
           }}
           anomalyCount={stats.anomalyCount}
+          currentUser={currentUser}
+          onLogout={handleLogout}
         />
 
         {/* Action / Notification Toast */}

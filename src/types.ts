@@ -125,3 +125,23 @@ export type NavigationSection =
   | 'analytics'
   | 'sensor_health'
   | 'settings';
+
+export interface AuthUser {
+  username: string;
+  name: string;
+  role: 'Admin';
+  email: string;
+  designation?: string;
+  avatar?: string;
+}
+
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  user?: AuthUser;
+  error?: string;
+}

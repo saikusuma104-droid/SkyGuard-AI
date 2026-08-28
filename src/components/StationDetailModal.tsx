@@ -166,8 +166,8 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({
                     {station.currentReadings.temperature}°C
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
-                    <span>Baseline Expected:</span>
-                    <span className="font-mono text-emerald-400">{station.expectedReadings.temperature}°C</span>
+                    <span>Normal Range:</span>
+                    <span className="font-mono text-emerald-400">15 - 42°C</span>
                   </div>
                 </div>
 
@@ -186,8 +186,8 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({
                     {station.currentReadings.pressure} hPa
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
-                    <span>Baseline Expected:</span>
-                    <span className="font-mono text-emerald-400">{station.expectedReadings.pressure} hPa</span>
+                    <span>Normal Range:</span>
+                    <span className="font-mono text-emerald-400">980 - 1030 hPa</span>
                   </div>
                 </div>
 
@@ -206,8 +206,8 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({
                     {station.currentReadings.humidity}%
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
-                    <span>Baseline Expected:</span>
-                    <span className="font-mono text-emerald-400">{station.expectedReadings.humidity}%</span>
+                    <span>Normal Range:</span>
+                    <span className="font-mono text-emerald-400">15 - 95%</span>
                   </div>
                 </div>
               </div>
@@ -365,51 +365,57 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({
           {activeTab === 'history' && (
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                <span>Recent 8-Cycle Telemetry (Observed vs Model Baseline)</span>
+                <span>Recent 8-Cycle Telemetry Log</span>
                 <span className="text-slate-400 font-normal">Hourly synoptic reporting</span>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-950/60 text-slate-400 font-mono text-[11px]">
-                    <tr>
-                      <th className="p-2">Time (UTC)</th>
-                      <th className="p-2">Observed Temp</th>
-                      <th className="p-2">Model Expected</th>
-                      <th className="p-2">Observed Press</th>
-                      <th className="p-2">Observed Humidity</th>
-                      <th className="p-2">AI Trust Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {station.recentHistory.map((point) => (
-                      <tr 
-                        key={point.time} 
-                        className={point.isAnomaly ? 'bg-rose-950/30' : 'hover:bg-slate-800/40'}
-                      >
-                        <td className="p-2 font-mono text-slate-300">{point.time}</td>
-                        <td className={`p-2 font-mono font-bold ${point.isAnomaly ? 'text-rose-400' : 'text-slate-200'}`}>
-                          {point.observedTemp}°C
-                        </td>
-                        <td className="p-2 font-mono text-emerald-400">{point.expectedTemp}°C</td>
-                        <td className="p-2 font-mono text-slate-300">{point.observedPressure} hPa</td>
-                        <td className="p-2 font-mono text-slate-300">{point.observedHumidity}%</td>
-                        <td className="p-2">
-                          {point.isAnomaly ? (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                              ANOMALY
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-400 bg-emerald-500/10">
-                              NOMINAL
-                            </span>
-                          )}
-                        </td>
+              {station.recentHistory.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  No historical cycles logged yet for this session. Synchronizing live 1-hour telemetry feeds.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-950/60 text-slate-400 font-mono text-[11px]">
+                      <tr>
+                        <th className="p-2">Time (UTC)</th>
+                        <th className="p-2">Observed Temp</th>
+                        <th className="p-2">Ref Range</th>
+                        <th className="p-2">Observed Press</th>
+                        <th className="p-2">Observed Humidity</th>
+                        <th className="p-2">AI Trust Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {station.recentHistory.map((point) => (
+                        <tr 
+                          key={point.time} 
+                          className={point.isAnomaly ? 'bg-rose-950/30' : 'hover:bg-slate-800/40'}
+                        >
+                          <td className="p-2 font-mono text-slate-300">{point.time}</td>
+                          <td className={`p-2 font-mono font-bold ${point.isAnomaly ? 'text-rose-400' : 'text-slate-200'}`}>
+                            {point.observedTemp}°C
+                          </td>
+                          <td className="p-2 font-mono text-emerald-400">{point.expectedTemp}°C</td>
+                          <td className="p-2 font-mono text-slate-300">{point.observedPressure} hPa</td>
+                          <td className="p-2 font-mono text-slate-300">{point.observedHumidity}%</td>
+                          <td className="p-2">
+                            {point.isAnomaly ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                ANOMALY
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-400 bg-emerald-500/10">
+                                NOMINAL
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>

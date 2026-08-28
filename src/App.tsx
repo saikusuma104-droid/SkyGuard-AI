@@ -9,23 +9,20 @@ import {
 } from './types';
 import { STATIONS, INITIAL_ANOMALIES, NETWORK_STATS } from './data/mockData';
 import { authService } from './auth/authService';
+import { fetchDirectOpenMeteoDataFor7Stations, checkAnomaly } from './services/api';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { LoginView } from './components/LoginView';
 import { NetworkStats } from './components/NetworkStats';
 import { IndiaMap } from './components/IndiaMap';
 import { RecentAnomalies } from './components/RecentAnomalies';
-import { SensorHealthSummary } from './components/SensorHealthSummary';
 import { AnomalyDetailModal } from './components/AnomalyDetailModal';
 import { StationDetailModal } from './components/StationDetailModal';
 
-// Additional views
+// Active View Components
 import { AllAnomaliesView } from './components/AllAnomaliesView';
-import { SensorHealthView } from './components/SensorHealthView';
 import { StationsListView } from './components/StationsListView';
-import { LiveMonitoringView } from './components/LiveMonitoringView';
-import { AnalyticsView } from './components/AnalyticsView';
-import { SettingsView } from './components/SettingsView';
+import { AboutView } from './components/AboutView';
 
 export default function App() {
   // Authentication State
@@ -36,6 +33,11 @@ export default function App() {
   const [anomalies, setAnomalies] = useState<AnomalyRecord[]>(INITIAL_ANOMALIES);
   const [stats, setStats] = useState<NetworkOverviewStats>(NETWORK_STATS);
   
+  // Last Refreshed Time tracking for 1-Hour live data interval
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string>(() => 
+    new Date().toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST'
+  );
+
   // Interactive Modals
   const [selectedStation, setSelectedStation] = useState<AWSStation | null>(null);
   const [selectedAnomaly, setSelectedAnomaly] = useState<AnomalyRecord | null>(null);
@@ -44,10 +46,132 @@ export default function App() {
   
   // Filter on Dashboard Map & Stats
   const [selectedFilter, setSelectedFilter] = useState<StationStatus | 'all'>('all');
-  
-  // Live Simulation state
-  const [isLiveSimulation, setIsLiveSimulation] = useState(true);
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
+
+  const handleTriggerHourlyRefresh = async (showToast = true) => {
+    try {
+      const liveReadings = await fetchDirectOpenMeteoDataFor7Stations(stations);
+      const timeNow = new Date().toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
+      
+      const newAnomalies: AnomalyRecord[] = [];
+      let healthyCnt = 0;
+      let suspiciousCnt = 0;
+      let anomalyCnt = 0;
+
+      const updatedStations = await Promise.all(
+        stations.map(async (origStation) => {
+          const live = liveReadings.find((r) => r.stationId === origStation.id);
+          if (!live) return origStation;
+
+          const temp = live.temperature;
+          const press = live.pressure;
+          const hum = live.humidity;
+
+          // Perform backend / ML anomaly check for live telemetry
+          const mlResult = await checkAnomaly({
+            stationId: origStation.id,
+            timestamp: timeNow,
+            temperature: temp,
+            dewPointTemperature: Math.round((temp - (100 - hum) / 5) * 10) / 10,
+            pressure: press,
+            relativeHumidity: hum,
+            windSpeed: live.windSpeed || 2.5,
+          });
+
+          const isAnomaly = mlResult.anomaly || mlResult.severity === 'CRITICAL' || mlResult.severity === 'HIGH';
+          const isSuspicious = !isAnomaly && (mlResult.severity === 'MEDIUM' || temp > 43.0 || press < 970.0 || press > 1035.0);
+
+          const status: StationStatus = isAnomaly ? 'anomaly' : isSuspicious ? 'suspicious' : 'healthy';
+
+          let anomalyRecord: AnomalyRecord | undefined = undefined;
+          if (isAnomaly || isSuspicious) {
+            anomalyRecord = {
+              id: `ANOM-${origStation.id}-${Date.now()}`,
+              stationId: origStation.id,
+              stationName: origStation.name,
+              location: origStation.location,
+              state: origStation.state,
+              parameter: temp > 43 ? 'temperature' : press < 970 ? 'pressure' : 'multi_sensor',
+              title: mlResult.severity === 'CRITICAL' ? 'Thermodynamic Limit Violation' : 'Telemetry Variance Flag',
+              classification: 'Hybrid Rule + Isolation Forest Detection',
+              actualValue: `${temp}°C / ${press} hPa / ${hum}%`,
+              expectedValue: `Normal Range: 15-42°C | 980-1030hPa`,
+              anomalyScore: mlResult.anomaly_score || (isAnomaly ? -0.15 : 0.10),
+              confidence: isAnomaly ? 95 : 85,
+              severity: (mlResult.severity as any) || (isAnomaly ? 'CRITICAL' : 'MEDIUM'),
+              timestamp: timeNow,
+              reason: mlResult.reason || `Telemetry check at ${timeNow}.`,
+              rootCauseHypothesis: 'Environmental boundary shift or sensor calibration drift.',
+              physicalLawValidation: 'Validated against thermodynamic reference limits.',
+              recommendation: 'Inspect station telemetry and run physical transducer audit.',
+              status: 'active',
+              nearestNeighbors: [],
+              historicalContext: 'Evaluated against hybrid Rule Engine and Isolation Forest model.',
+            };
+            newAnomalies.push(anomalyRecord);
+          }
+
+          if (status === 'anomaly') anomalyCnt++;
+          else if (status === 'suspicious') suspiciousCnt++;
+          else healthyCnt++;
+
+          return {
+            ...origStation,
+            status,
+            trustScore: isAnomaly ? 25 : isSuspicious ? 70 : 100,
+            lastPing: timeNow,
+            lastPacketReceivedAgo: 'Just now',
+            currentReadings: {
+              ...origStation.currentReadings,
+              temperature: temp,
+              pressure: press,
+              humidity: hum,
+              windSpeed: live.windSpeed || origStation.currentReadings.windSpeed,
+            },
+            activeAnomaly: anomalyRecord,
+          };
+        })
+      );
+
+      setStations(updatedStations);
+      setAnomalies(newAnomalies);
+      setLastRefreshedAt(timeNow);
+
+      setStats({
+        totalStations: updatedStations.length,
+        healthyCount: healthyCnt,
+        suspiciousCount: suspiciousCnt,
+        anomalyCount: anomalyCnt,
+        offlineCount: 0,
+        networkSensorHealthPercent: Math.round((healthyCnt / updatedStations.length) * 100),
+        sensorTypeHealth: {
+          temperature: { healthyPercent: Math.round(((updatedStations.length - anomalyCnt) / updatedStations.length) * 100), count: updatedStations.length, degraded: suspiciousCnt, critical: anomalyCnt },
+          pressure: { healthyPercent: 100, count: updatedStations.length, degraded: 0, critical: 0 },
+          humidity: { healthyPercent: 100, count: updatedStations.length, degraded: 0, critical: 0 },
+        },
+        totalPacketsProcessedToday: 17071 + updatedStations.length,
+        anomaliesDetectedToday: newAnomalies.length,
+      });
+
+      if (showToast) {
+        handleActionComplete(`Refreshed real telemetry for 7 AWS stations (${timeNow}).`);
+      }
+    } catch (e) {
+      console.error('Hourly live refresh error:', e);
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch on mount
+    handleTriggerHourlyRefresh(false);
+
+    // 1-Hour automated refresh cycle (3,600,000ms = 1 Hour)
+    const interval = setInterval(() => {
+      handleTriggerHourlyRefresh(true);
+    }, 3600000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     await authService.logout();
@@ -62,42 +186,6 @@ export default function App() {
     setCurrentUser(user);
     handleActionComplete(`Authenticated as ${user.name} (${user.role})`);
   };
-
-  // Live simulation tick (subtle periodic sensor stream jitter to indicate continuous live monitoring)
-  useEffect(() => {
-    if (!currentUser || !isLiveSimulation) return;
-
-    const interval = setInterval(() => {
-      setStations((prevStations) =>
-        prevStations.map((station) => {
-          if (station.status === 'offline') return station;
-          
-          // Subtle realistic micro-fluctuation in decimal places
-          const tempDelta = (Math.random() - 0.5) * 0.1;
-          const pressDelta = (Math.random() - 0.5) * 0.05;
-          const humDelta = Math.floor((Math.random() - 0.5) * 0.4);
-
-          // For the anomaly station AWS-003, keep it anomalous at ~55°C
-          const newTemp = station.id === 'AWS-003' 
-            ? Number((55.2 + (Math.random() - 0.5) * 0.2).toFixed(1))
-            : Number((station.currentReadings.temperature + tempDelta).toFixed(1));
-
-          return {
-            ...station,
-            lastPacketReceivedAgo: `${Math.floor(Math.random() * 8) + 1}s ago`,
-            currentReadings: {
-              ...station.currentReadings,
-              temperature: newTemp,
-              pressure: Number((station.currentReadings.pressure + pressDelta).toFixed(1)),
-              humidity: Math.min(100, Math.max(10, station.currentReadings.humidity + humDelta)),
-            },
-          };
-        })
-      );
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [currentUser, isLiveSimulation]);
 
   const handleOpenAnomaly = (anomaly: AnomalyRecord) => {
     setSelectedAnomaly(anomaly);
@@ -116,7 +204,7 @@ export default function App() {
     setTimeout(() => setNotificationToast(null), 5000);
   };
 
-  // If not authenticated, present the SkyGuard AI Demo Login Screen
+  // If not authenticated, present Login Screen
   if (!currentUser) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
@@ -127,6 +215,7 @@ export default function App() {
       <Sidebar
         currentSection={currentSection}
         onSelectSection={(section) => setCurrentSection(section)}
+        totalStationsCount={stations.length}
         anomalyCount={stats.anomalyCount}
         suspiciousCount={stats.suspiciousCount}
         currentUser={currentUser}
@@ -135,18 +224,15 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        {/* 2. Top Header Bar with Live Indicator & User Controls */}
+        {/* 2. Top Header Bar */}
         <Header
           stations={stations}
           onSelectStation={handleSelectStation}
-          isLiveSimulation={isLiveSimulation}
-          onToggleSimulation={() => setIsLiveSimulation(!isLiveSimulation)}
-          onRefreshData={() => {
-            handleActionComplete('Telemetry cycle refreshed from 48 automatic weather stations.');
-          }}
           anomalyCount={stats.anomalyCount}
           currentUser={currentUser}
           onLogout={handleLogout}
+          lastRefreshedAt={lastRefreshedAt}
+          onTriggerHourlyRefresh={() => handleTriggerHourlyRefresh(true)}
         />
 
         {/* Action / Notification Toast */}
@@ -161,14 +247,14 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {currentSection === 'dashboard' && (
             <div className="space-y-6 max-w-7xl mx-auto">
-              {/* 2. Network Overview Statistics (4 Cards) */}
+              {/* 1. Network Overview Statistics (4 Cards) */}
               <NetworkStats
                 stats={stats}
                 selectedFilter={selectedFilter}
                 onSelectFilter={(filter) => setSelectedFilter(filter)}
               />
 
-              {/* 3. Live AWS Map (Centerpiece) */}
+              {/* 2. Live AWS Map */}
               <IndiaMap
                 stations={stations}
                 selectedStation={selectedStation}
@@ -184,19 +270,12 @@ export default function App() {
                 onFilterChange={(filter) => setSelectedFilter(filter)}
               />
 
-              {/* 4. Recent Anomalies & 5. Sensor Health Summary (2-Column Balanced Grid) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Recent Anomalies Section */}
+              {/* 3. Recent Anomalies */}
+              <div className="max-w-7xl mx-auto">
                 <RecentAnomalies
                   anomalies={anomalies}
                   onSelectAnomaly={handleOpenAnomaly}
                   onViewAllAnomalies={() => setCurrentSection('anomalies')}
-                />
-
-                {/* Sensor Health Summary Section */}
-                <SensorHealthSummary
-                  stats={stats}
-                  onViewSensorHealth={() => setCurrentSection('sensor_health')}
                 />
               </div>
             </div>
@@ -213,17 +292,6 @@ export default function App() {
             </div>
           )}
 
-          {currentSection === 'sensor_health' && (
-            <div className="max-w-7xl mx-auto">
-              <SensorHealthView
-                stats={stats}
-                stations={stations}
-                onSelectStation={handleSelectStation}
-                onBackToDashboard={() => setCurrentSection('dashboard')}
-              />
-            </div>
-          )}
-
           {currentSection === 'stations' && (
             <div className="max-w-7xl mx-auto">
               <StationsListView
@@ -234,27 +302,9 @@ export default function App() {
             </div>
           )}
 
-          {currentSection === 'live_monitoring' && (
+          {currentSection === 'about' && (
             <div className="max-w-7xl mx-auto">
-              <LiveMonitoringView
-                stations={stations}
-                onSelectStation={handleSelectStation}
-                onBackToDashboard={() => setCurrentSection('dashboard')}
-              />
-            </div>
-          )}
-
-          {currentSection === 'analytics' && (
-            <div className="max-w-7xl mx-auto">
-              <AnalyticsView
-                onBackToDashboard={() => setCurrentSection('dashboard')}
-              />
-            </div>
-          )}
-
-          {currentSection === 'settings' && (
-            <div className="max-w-7xl mx-auto">
-              <SettingsView
+              <AboutView
                 onBackToDashboard={() => setCurrentSection('dashboard')}
               />
             </div>

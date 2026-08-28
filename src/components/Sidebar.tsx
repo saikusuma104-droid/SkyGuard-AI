@@ -1,23 +1,18 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
-  Activity, 
   Radio, 
   AlertTriangle, 
-  BarChart3, 
-  HeartPulse, 
-  Settings, 
+  Info,
   ShieldAlert, 
-  CheckCircle2,
-  Server,
-  LogOut,
-  UserCheck
+  LogOut
 } from 'lucide-react';
 import { NavigationSection, AuthUser } from '../types';
 
 interface SidebarProps {
   currentSection: NavigationSection;
   onSelectSection: (section: NavigationSection) => void;
+  totalStationsCount: number;
   anomalyCount: number;
   suspiciousCount: number;
   currentUser?: AuthUser | null;
@@ -27,6 +22,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   currentSection,
   onSelectSection,
+  totalStationsCount,
   anomalyCount,
   suspiciousCount,
   currentUser,
@@ -40,41 +36,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badgeColor?: string;
   }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'live_monitoring', label: 'Live Monitoring', icon: Activity },
-    { id: 'stations', label: 'Stations', icon: Radio, badge: 48 },
+    { id: 'stations', label: 'Stations', icon: Radio, badge: totalStationsCount },
     { 
       id: 'anomalies', 
       label: 'Anomalies', 
       icon: AlertTriangle, 
       badge: anomalyCount + suspiciousCount,
-      badgeColor: 'bg-red-500/20 text-red-400 border border-red-500/30' 
+      badgeColor: (anomalyCount + suspiciousCount) > 0 
+        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' 
+        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
     },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'sensor_health', label: 'Sensor Health', icon: HeartPulse },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'about', label: 'About / System', icon: Info },
   ];
 
   return (
     <aside 
       id="main-sidebar"
-      className="w-64 bg-[#0F172A] border-r border-slate-800/80 flex flex-col flex-shrink-0 select-none z-30"
+      className="w-64 bg-[#0F172A] border-r border-slate-800/80 flex flex-col flex-shrink-0 select-none z-30 shadow-xl"
     >
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800/80 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-500 to-blue-700 flex items-center justify-center shadow-lg shadow-sky-950/50 ring-1 ring-sky-400/30">
+      <div className="p-4 sm:p-5 border-b border-slate-800/80 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-700 flex items-center justify-center shadow-lg shadow-sky-950/50 border border-sky-400/30 flex-shrink-0">
           <ShieldAlert className="w-5 h-5 text-white" />
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-lg tracking-tight text-white font-['Plus_Jakarta_Sans']">
               SkyGuard
             </span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/20 text-sky-400 border border-sky-500/30">
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">
               AI
             </span>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium tracking-wide">
-            AWS Trust & Operations
+          <span className="text-[11px] text-slate-400 font-medium truncate">
+            AWS Real Telemetry
           </span>
         </div>
       </div>
@@ -94,12 +89,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               id={`nav-item-${item.id}`}
               onClick={() => onSelectSection(item.id)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group relative ${
                 isActive
                   ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30 shadow-sm shadow-sky-950/40'
-                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-slate-100'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
               }`}
             >
+              {isActive && (
+                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-sky-400" />
+              )}
+
               <div className="flex items-center gap-3">
                 <Icon
                   className={`w-4 h-4 transition-colors ${
@@ -111,8 +110,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {item.badge !== undefined && (
                 <span
-                  className={`text-[11px] font-mono px-2 py-0.5 rounded-full ${
-                    item.badgeColor || 'bg-slate-800 text-slate-400'
+                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                    item.badgeColor || 'bg-slate-800 text-slate-400 border border-slate-700/60'
                   }`}
                 >
                   {item.badge}
@@ -123,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </nav>
 
-      {/* User Profile & Logout Box */}
+      {/* User Profile Box */}
       {currentUser && (
         <div className="mx-3 mb-2 p-3 rounded-xl bg-slate-900/90 border border-slate-800/80 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -135,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-mono font-bold text-xs text-white truncate">
                   {currentUser.username}
                 </span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="px-1 py-0.2 rounded text-[8px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   {currentUser.role}
                 </span>
               </div>
@@ -150,39 +149,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
               id="sidebar-logout-button"
               onClick={onLogout}
               title="Logout session"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700/80 hover:border-rose-500/30 transition-all flex-shrink-0"
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-700/80 hover:border-rose-500/30 transition-all flex-shrink-0"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       )}
 
-      {/* Network Status Footer */}
-      <div className="p-4 m-3 mt-0 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-2.5">
+      {/* System Status Footer */}
+      <div className="p-3.5 m-3 mt-0 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-2 text-xs">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-xs font-medium text-slate-300">AWS Telemetry Hub</span>
+            <span className="text-[11px] font-semibold text-slate-200">AWS Telemetry Hub</span>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+          <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
             ONLINE
           </span>
         </div>
 
-        <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800">
-          <span>Active Ingestion</span>
-          <span className="font-mono text-slate-300">1.2 Hz Stream</span>
+        <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80 font-mono">
+          <span>Sync Cycle</span>
+          <span className="text-emerald-400 font-bold">1 Hour</span>
         </div>
 
-        <div className="text-[11px] text-slate-400 flex items-center justify-between">
-          <span>AI Engine</span>
-          <span className="font-mono text-sky-400">v2.4 SIH-Core</span>
+        <div className="text-[10px] text-slate-400 flex items-center justify-between font-mono">
+          <span>AI Model</span>
+          <span className="text-sky-400 font-bold">v2.4 SIH</span>
         </div>
       </div>
     </aside>
   );
 };
+

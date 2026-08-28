@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Radio, 
   Search, 
   RefreshCw, 
-  Play, 
-  Pause, 
-  ShieldCheck, 
   Clock, 
-  BellRing, 
-  SlidersHorizontal,
-  ChevronDown,
   LogOut,
-  UserCheck
+  ShieldCheck,
+  Radio
 } from 'lucide-react';
 import { AWSStation, AuthUser } from '../types';
 
@@ -19,23 +13,20 @@ interface HeaderProps {
   onSearchStation?: (query: string) => void;
   onSelectStation?: (station: AWSStation) => void;
   stations: AWSStation[];
-  isLiveSimulation: boolean;
-  onToggleSimulation: () => void;
-  onRefreshData: () => void;
   anomalyCount: number;
   currentUser?: AuthUser | null;
   onLogout?: () => void;
+  lastRefreshedAt?: string;
+  onTriggerHourlyRefresh?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onSelectStation,
   stations,
-  isLiveSimulation,
-  onToggleSimulation,
-  onRefreshData,
-  anomalyCount,
   currentUser,
   onLogout,
+  lastRefreshedAt,
+  onTriggerHourlyRefresh,
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,9 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const utcString = now.toUTCString().slice(17, 25) + ' UTC';
       const istString = now.toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
-      setTimeStr(`${istString} (${utcString})`);
+      setTimeStr(istString);
     };
 
     updateTime();
@@ -65,46 +55,51 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header 
       id="main-app-header" 
-      className="h-16 bg-[#0F172A]/95 backdrop-blur-sm border-b border-slate-800/80 px-6 flex items-center justify-between z-20 sticky top-0"
+      className="h-16 bg-[#0F172A]/95 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 flex items-center justify-between z-20 sticky top-0 gap-4"
     >
-      {/* Title & Subtitle */}
-      <div className="flex items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-base font-bold text-white tracking-tight font-['Plus_Jakarta_Sans'] flex items-center gap-2">
-              SkyGuard AI
-            </h1>
-            <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-slate-600"></span>
-            <span className="text-xs font-medium text-slate-400">
-              AWS Monitoring & Intelligence
-            </span>
-          </div>
+      {/* Left: Branding & Status Subtitle */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-base text-white tracking-tight font-['Plus_Jakarta_Sans'] whitespace-nowrap">
+            SkyGuard <span className="text-sky-400">AI</span>
+          </span>
+          <span className="hidden md:inline-block text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700/80 whitespace-nowrap">
+            7 AWS Live Telemetry
+          </span>
         </div>
       </div>
 
-      {/* Center Search / Quick Station Lookup */}
-      <div className="hidden md:flex relative w-72 lg:w-96">
+      {/* Center: Search / Quick Station Lookup */}
+      <div className="flex-1 max-w-md relative hidden sm:block">
         <div className="relative w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             id="station-search-input"
             type="text"
-            placeholder="Search AWS-ID or city (e.g. AWS-003, Hyderabad)..."
+            placeholder="Search AWS-ID or city (e.g. AWS-001)..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setIsSearchOpen(true);
             }}
             onFocus={() => setIsSearchOpen(true)}
-            className="w-full pl-9 pr-4 py-1.5 bg-slate-900/90 text-sm text-slate-200 placeholder-slate-400 rounded-lg border border-slate-800 focus:outline-none focus:border-sky-500/60 focus:ring-1 focus:ring-sky-500/30 transition-all font-mono"
+            className="w-full pl-9 pr-8 py-1.5 bg-slate-900/90 text-xs text-slate-200 placeholder-slate-400 rounded-lg border border-slate-800 focus:outline-none focus:border-sky-500/60 focus:ring-1 focus:ring-sky-500/30 transition-all font-mono"
           />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
+            >
+              ×
+            </button>
+          )}
         </div>
 
-        {/* Search Results Dropdown */}
+        {/* Autocomplete Dropdown */}
         {isSearchOpen && filteredStations.length > 0 && (
           <div 
             id="station-search-results"
-            className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-800 rounded-lg shadow-xl shadow-black/60 overflow-hidden z-50 max-h-72 overflow-y-auto"
+            className="absolute top-full left-0 right-0 mt-1 bg-[#0F172A] border border-slate-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-72 overflow-y-auto divide-y divide-slate-800/60"
           >
             {filteredStations.map((station) => (
               <button
@@ -114,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsSearchOpen(false);
                   setSearchQuery('');
                 }}
-                className="w-full px-3.5 py-2.5 flex items-center justify-between hover:bg-slate-800/80 transition-colors border-b border-slate-800/50 text-left"
+                className="w-full px-3.5 py-2.5 flex items-center justify-between hover:bg-slate-800/80 transition-colors text-left group"
               >
                 <div className="flex items-center gap-2.5">
                   <span className={`w-2 h-2 rounded-full ${
@@ -123,99 +118,83 @@ export const Header: React.FC<HeaderProps> = ({
                     station.status === 'anomaly' ? 'bg-rose-500' : 'bg-slate-500'
                   }`} />
                   <div>
-                    <div className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
-                      {station.id}
-                      <span className="text-slate-400 font-sans font-normal">({station.location})</span>
+                    <div className="text-xs font-mono font-bold text-white group-hover:text-sky-300 transition-colors">
+                      {station.id} <span className="font-sans font-normal text-slate-400">({station.location})</span>
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
                       {station.currentReadings.temperature}°C • {station.currentReadings.pressure} hPa • {station.currentReadings.humidity}% RH
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded uppercase ${
-                    station.status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                    station.status === 'suspicious' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                    station.status === 'anomaly' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                    'bg-slate-800 text-slate-400'
-                  }`}>
-                    {station.status}
-                  </span>
-                </div>
+
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
+                  station.status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                  station.status === 'suspicious' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                  station.status === 'anomaly' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                  'bg-slate-800 text-slate-400'
+                }`}>
+                  {station.status}
+                </span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Right Controls & Live Indicator */}
-      <div className="flex items-center gap-3.5">
-        {/* Clock */}
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800/80 text-[11px] font-mono text-slate-300">
+      {/* Right Controls */}
+      <div className="flex items-center gap-2.5 flex-shrink-0">
+        {/* Sync Pill */}
+        {lastRefreshedAt && (
+          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[11px] font-mono text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Sync: {lastRefreshedAt}</span>
+          </div>
+        )}
+
+        {/* Refresh Action */}
+        {onTriggerHourlyRefresh && (
+          <button
+            onClick={onTriggerHourlyRefresh}
+            title="Refresh Live Telemetry Feed"
+            className="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5 text-xs font-mono shadow-sm"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        )}
+
+        {/* Live Clock */}
+        <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-300">
           <Clock className="w-3.5 h-3.5 text-slate-400" />
-          <span>{timeStr || '10:30:00 IST'}</span>
+          <span>{timeStr}</span>
         </div>
 
-        {/* Live Simulation Controls */}
-        <button
-          id="toggle-simulation-btn"
-          onClick={onToggleSimulation}
-          title={isLiveSimulation ? "Pause live telemetry simulation" : "Resume live telemetry simulation"}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-            isLiveSimulation 
-              ? 'bg-sky-500/10 text-sky-300 border-sky-500/30 hover:bg-sky-500/20'
-              : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-          }`}
-        >
-          {isLiveSimulation ? (
-            <>
-              <Pause className="w-3.5 h-3.5 text-sky-400" />
-              <span className="hidden sm:inline">Stream Active</span>
-            </>
-          ) : (
-            <>
-              <Play className="w-3.5 h-3.5 text-slate-400" />
-              <span className="hidden sm:inline">Stream Paused</span>
-            </>
-          )}
-        </button>
-
-        {/* Refresh button */}
-        <button
-          id="refresh-telemetry-btn"
-          onClick={onRefreshData}
-          title="Force telemetry cycle refresh"
-          className="p-1.5 rounded-lg bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800 transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Subtle LIVE Indicator as specified */}
+        {/* Real Telemetry Indicator Badge */}
         <div 
           id="header-live-indicator"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800/90 shadow-sm"
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span className="text-xs font-bold font-mono tracking-wider text-emerald-400">
-            LIVE
+          <span className="text-[11px] font-bold font-mono tracking-wider text-emerald-400 hidden sm:inline">
+            LIVE TELEMETRY
           </span>
         </div>
 
-        {/* Current Admin User Badge & Logout Option */}
+        {/* Current User Badge & Logout */}
         {currentUser && (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800">
-              <div className="w-6 h-6 rounded-md bg-sky-500/20 text-sky-400 font-mono font-bold text-xs flex items-center justify-center border border-sky-500/30">
+            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800">
+              <div className="w-6 h-6 rounded bg-sky-500/20 text-sky-400 font-mono font-bold text-xs flex items-center justify-center border border-sky-500/30">
                 {currentUser.username.slice(0, 2).toUpperCase()}
               </div>
-              <div className="text-left">
-                <div className="text-xs font-bold font-mono text-white leading-tight">
+              <div className="hidden sm:block text-left pr-1">
+                <div className="text-[11px] font-bold font-mono text-white leading-tight">
                   {currentUser.username}
                 </div>
-                <div className="text-[9px] font-mono text-emerald-400 font-semibold leading-tight">
+                <div className="text-[9px] font-mono text-emerald-400 font-semibold leading-none">
                   {currentUser.role}
                 </div>
               </div>
@@ -226,10 +205,9 @@ export const Header: React.FC<HeaderProps> = ({
                 id="header-logout-btn"
                 onClick={onLogout}
                 title="Logout of SkyGuard AI"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-700/70 hover:border-rose-500/30 text-xs font-medium transition-all"
+                className="p-2 rounded-lg bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden md:inline text-[11px]">Logout</span>
               </button>
             )}
           </div>
@@ -238,3 +216,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

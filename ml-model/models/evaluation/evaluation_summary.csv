@@ -1,0 +1,8 @@
+station_id,total_rows,training_rows,testing_rows,test_anomalies,test_anomaly_percentage
+station_01,17071,13656,3415,47,1.38
+station_02,1562,1249,313,1,0.32
+station_03,267,213,54,0,0.0
+station_04,700,560,140,4,2.86
+station_05,2141,1712,429,7,1.63
+station_06,2883,2306,577,4,0.69
+station_07,700,560,140,3,2.14

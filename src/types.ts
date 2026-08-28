@@ -95,7 +95,7 @@ export interface AWSStation {
   sensorHealth: SensorHealthBreakdown;
   activeAnomaly?: AnomalyRecord;
   recentHistory: TelemetryPoint[];
-  stationType: 'Primary Synoptic' | 'Agromet AWS' | 'High-Altitude AWS' | 'Urban Mesonet';
+  stationType: string;
   installYear: number;
 }
 
@@ -117,14 +117,9 @@ export interface NetworkOverviewStats {
 
 export type NavigationSection = 
   | 'dashboard'
-  | 'live_monitoring'
   | 'stations'
-  | 'station_details'
   | 'anomalies'
-  | 'anomaly_details'
-  | 'analytics'
-  | 'sensor_health'
-  | 'settings';
+  | 'about';
 
 export interface AuthUser {
   username: string;

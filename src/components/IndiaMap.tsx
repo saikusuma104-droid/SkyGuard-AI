@@ -43,20 +43,19 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
 
   // Geographic bounds for India projection
   const bounds = {
-    minLat: 7.5,
+    minLat: 7.0,
     maxLat: 36.5,
     minLng: 67.5,
     maxLng: 96.5,
   };
 
-  // Convert (lat, lng) to SVG viewBox percentages (width: 800, height: 750)
+  // Convert (lat, lng) to SVG viewBox percentages (width: 800, height: 760)
   const projectCoordinates = (lat: number, lng: number) => {
     const svgWidth = 800;
     const svgHeight = 760;
     
-    // Normal linear equirectangular approximation adapted for India sub-continent
-    const x = ((lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * (svgWidth - 120) + 60;
-    const y = ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat)) * (svgHeight - 100) + 50;
+    const x = ((lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * (svgWidth - 160) + 80;
+    const y = ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat)) * (svgHeight - 120) + 60;
     
     return { x, y };
   };
@@ -66,7 +65,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     return stations.filter((s) => s.status === activeFilter);
   }, [stations, activeFilter]);
 
-  const activeAnomalyStation = stations.find((s) => s.id === 'AWS-003') || stations.find(s => s.status === 'anomaly');
+  const activeAnomalyStation = stations.find((s) => s.status === 'anomaly') || stations.find((s) => s.status === 'suspicious') || null;
 
   return (
     <div 
@@ -74,24 +73,18 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       className="bg-[#131E32] rounded-xl border border-slate-800/90 shadow-lg shadow-black/40 overflow-hidden flex flex-col"
     >
       {/* Map Header */}
-      <div className="p-4 sm:px-6 py-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-900/40">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
-              <Crosshair className="w-4 h-4" />
-            </span>
-            <h2 className="text-base font-bold text-white tracking-tight font-['Plus_Jakarta_Sans']">
-              LIVE AWS MAP
-            </h2>
-            <span className="text-xs text-slate-400 hidden sm:inline-block">|</span>
-            <span className="text-xs text-slate-400 hidden sm:inline-block">
-              Real-time station status & spatial validation
-            </span>
-          </div>
+      <div className="p-4 sm:px-6 py-3.5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-900/50">
+        <div className="flex items-center gap-2.5">
+          <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-inner">
+            <Crosshair className="w-4 h-4" />
+          </span>
+          <h2 className="text-base font-bold text-white tracking-tight font-['Plus_Jakarta_Sans']">
+            LIVE AWS SPATIAL MONITORING (7 NODES)
+          </h2>
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-lg border border-slate-800 text-xs">
+        <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800 text-xs">
           <button
             onClick={() => onFilterChange('all')}
             className={`px-2.5 py-1 rounded-md transition-all font-medium ${
@@ -135,17 +128,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
             Anomaly
           </button>
-          <button
-            onClick={() => onFilterChange('offline')}
-            className={`px-2.5 py-1 rounded-md transition-all font-medium flex items-center gap-1.5 ${
-              activeFilter === 'offline'
-                ? 'bg-slate-700/60 text-slate-200 border border-slate-600'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-            Offline
-          </button>
         </div>
       </div>
 
@@ -168,7 +150,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
           style={{ transform: `scale(${zoomLevel})` }}
         >
           <defs>
-            {/* Pulsing ring filter for anomalies */}
             <radialGradient id="anomaly-glow" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#ef4444" stopOpacity="0.8" />
               <stop offset="70%" stopColor="#ef4444" stopOpacity="0.2" />
@@ -180,9 +161,8 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             </radialGradient>
           </defs>
 
-          {/* India Regional Map Outline / Polygon Silhouette */}
+          {/* India Regional Map Outline */}
           <g className="opacity-90">
-            {/* India Subcontinent Simplified Polygon */}
             <path
               d="M 330 65 
                  C 340 50, 360 45, 380 50 
@@ -216,7 +196,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
               className="drop-shadow-md"
             />
 
-            {/* Major State Division Guides (Subtle) */}
+            {/* Subtle Division Guides */}
             <path
               d="M 260 190 Q 350 220 480 220 M 230 410 Q 340 430 500 440 M 185 320 Q 300 340 450 330 M 340 120 L 340 220 M 430 150 L 430 260 M 325 500 Q 380 520 450 540"
               fill="none"
@@ -226,18 +206,39 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             />
           </g>
 
-          {/* Spatial Correlation Link Lines between anomalous AWS-003 and its neighbors */}
+          {/* Inter-Station Synoptic Network Link Mesh */}
+          <g className="station-mesh-lines opacity-20">
+            {stations.map((st1, i) => {
+              const p1 = projectCoordinates(st1.lat, st1.lng);
+              return stations.slice(i + 1).map((st2) => {
+                const p2 = projectCoordinates(st2.lat, st2.lng);
+                return (
+                  <line
+                    key={`mesh-${st1.id}-${st2.id}`}
+                    x1={p1.x}
+                    y1={p1.y}
+                    x2={p2.x}
+                    y2={p2.y}
+                    stroke="#38bdf8"
+                    strokeWidth="0.8"
+                    strokeDasharray="2,4"
+                  />
+                );
+              });
+            })}
+          </g>
+
+          {/* Spatial Correlation Highlight Lines for Active Anomaly Station */}
           {activeAnomalyStation && (
             <g className="spatial-correlation-links">
-              {activeAnomalyStation.activeAnomaly?.nearestNeighbors.map((neighbor) => {
-                const neighborStation = stations.find((s) => s.id === neighbor.stationId);
-                if (!neighborStation) return null;
-                const p1 = projectCoordinates(activeAnomalyStation.lat, activeAnomalyStation.lng);
-                const p2 = projectCoordinates(neighborStation.lat, neighborStation.lng);
-
-                return (
-                  <g key={`link-${neighbor.stationId}`}>
+              {stations
+                .filter((s) => s.id !== activeAnomalyStation.id)
+                .map((neighbor) => {
+                  const p1 = projectCoordinates(activeAnomalyStation.lat, activeAnomalyStation.lng);
+                  const p2 = projectCoordinates(neighbor.lat, neighbor.lng);
+                  return (
                     <line
+                      key={`link-anom-${neighbor.id}`}
                       x1={p1.x}
                       y1={p1.y}
                       x2={p2.x}
@@ -245,37 +246,30 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                       stroke="#ef4444"
                       strokeWidth="1.5"
                       strokeDasharray="3,3"
-                      strokeOpacity="0.4"
+                      strokeOpacity="0.6"
                     />
-                  </g>
-                );
-              })}
+                  );
+                })}
             </g>
           )}
 
-          {/* Render Station Markers */}
+          {/* Render 7 Station Markers */}
           {filteredStations.map((station) => {
             const { x, y } = projectCoordinates(station.lat, station.lng);
             const isSelected = selectedStation?.id === station.id;
             const isHovered = hoveredStation?.id === station.id;
-            const isCriticalAnomaly = station.id === 'AWS-003' || station.status === 'anomaly';
+            const isAnomaly = station.status === 'anomaly';
+            const isSuspicious = station.status === 'suspicious';
 
             let markerFill = '#22c55e'; // green
             let markerStroke = '#15803d';
-            let haloColor = 'rgba(34, 197, 94, 0.3)';
 
-            if (station.status === 'suspicious') {
+            if (isSuspicious) {
               markerFill = '#f59e0b'; // orange
               markerStroke = '#b45309';
-              haloColor = 'rgba(245, 158, 11, 0.4)';
-            } else if (station.status === 'anomaly') {
+            } else if (isAnomaly) {
               markerFill = '#ef4444'; // red
               markerStroke = '#b91c1c';
-              haloColor = 'rgba(239, 68, 68, 0.5)';
-            } else if (station.status === 'offline') {
-              markerFill = '#64748b'; // gray
-              markerStroke = '#334155';
-              haloColor = 'rgba(100, 116, 139, 0.3)';
             }
 
             return (
@@ -287,8 +281,8 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                 onMouseEnter={() => setHoveredStation(station)}
                 onMouseLeave={() => setHoveredStation(null)}
               >
-                {/* Noticeable radar ping ring for Anomalous station (e.g. AWS-003) */}
-                {isCriticalAnomaly && (
+                {/* Radar ping ring for Anomaly station */}
+                {isAnomaly && (
                   <>
                     <circle
                       cx={x}
@@ -310,7 +304,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                 )}
 
                 {/* Suspicious halo */}
-                {station.status === 'suspicious' && (
+                {isSuspicious && (
                   <circle
                     cx={x}
                     cy={y}
@@ -325,7 +319,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                   <circle
                     cx={x}
                     cy={y}
-                    r="12"
+                    r="13"
                     fill="none"
                     stroke="#38bdf8"
                     strokeWidth="2"
@@ -337,22 +331,32 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                 <circle
                   cx={x}
                   cy={y}
-                  r={isCriticalAnomaly ? 7 : 5.5}
+                  r={isAnomaly ? 7.5 : 6}
                   fill={markerFill}
                   stroke="#ffffff"
                   strokeWidth="1.5"
                   className="transition-transform duration-200 group-hover:scale-125"
                 />
 
-                {/* Station ID Label */}
+                {/* Station ID & City Label */}
                 <text
-                  x={x + 9}
+                  x={x + 10}
                   y={y + 3}
-                  fill={station.status === 'anomaly' ? '#fca5a5' : station.status === 'suspicious' ? '#fcd34d' : '#94a3b8'}
-                  fontSize="9.5"
+                  fill={isAnomaly ? '#fca5a5' : isSuspicious ? '#fcd34d' : '#e2e8f0'}
+                  fontSize="10"
                   fontFamily="'JetBrains Mono', monospace"
-                  fontWeight={station.status === 'anomaly' ? '700' : '500'}
-                  className="pointer-events-none drop-shadow-sm select-none"
+                  fontWeight="700"
+                  className="pointer-events-none drop-shadow-md select-none"
+                >
+                  {station.location}
+                </text>
+                <text
+                  x={x + 10}
+                  y={y + 13}
+                  fill="#94a3b8"
+                  fontSize="8.5"
+                  fontFamily="'JetBrains Mono', monospace"
+                  className="pointer-events-none drop-shadow-sm select-none opacity-80"
                 >
                   {station.id}
                 </text>
@@ -414,7 +418,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                         Temp
                       </div>
                       <div className={`text-xs font-mono font-bold mt-0.5 ${
-                        isAnomaly && active.activeAnomaly?.parameter === 'temperature' ? 'text-rose-400' : 'text-slate-200'
+                        isAnomaly && active.activeAnomaly?.parameter === 'temperature' ? 'text-rose-400 font-extrabold' : 'text-slate-200'
                       }`}>
                         {active.currentReadings.temperature}°C
                       </div>
@@ -426,7 +430,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                         Pressure
                       </div>
                       <div className={`text-xs font-mono font-bold mt-0.5 ${
-                        isSuspicious && active.activeAnomaly?.parameter === 'pressure' ? 'text-amber-400' : 'text-slate-200'
+                        isSuspicious && active.activeAnomaly?.parameter === 'pressure' ? 'text-amber-400 font-extrabold' : 'text-slate-200'
                       }`}>
                         {active.currentReadings.pressure} hPa
                       </div>
@@ -438,24 +442,24 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                         Humidity
                       </div>
                       <div className={`text-xs font-mono font-bold mt-0.5 ${
-                        isSuspicious && active.activeAnomaly?.parameter === 'humidity' ? 'text-amber-400' : 'text-slate-200'
+                        isSuspicious && active.activeAnomaly?.parameter === 'humidity' ? 'text-amber-400 font-extrabold' : 'text-slate-200'
                       }`}>
                         {active.currentReadings.humidity}%
                       </div>
                     </div>
                   </div>
 
-                  {/* Anomaly / Trust Score Callout */}
-                  {active.confidence && (isAnomaly || isSuspicious) ? (
+                  {/* Anomaly Callout */}
+                  {isAnomaly || isSuspicious ? (
                     <div className="p-2 rounded-lg bg-rose-950/40 border border-rose-500/30 mb-2 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
                         <span className="text-[11px] font-medium text-rose-300">
-                          {active.activeAnomaly?.title || 'AI Anomaly Flagged'}
+                          {active.activeAnomaly?.title || 'Extreme Anomaly Flagged'}
                         </span>
                       </div>
                       <span className="text-[11px] font-mono font-bold text-rose-400">
-                        Conf: {active.confidence}%
+                        Score: {active.activeAnomaly?.anomalyScore ? active.activeAnomaly.anomalyScore.toFixed(3) : 'Flagged'}
                       </span>
                     </div>
                   ) : (
@@ -493,9 +497,8 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
           </div>
         )}
 
-        {/* Map Floating Controls & Legend */}
+        {/* Map Controls */}
         <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-          {/* Zoom controls */}
           <div className="flex flex-col bg-slate-900/90 border border-slate-800 rounded-lg overflow-hidden shadow-md">
             <button
               onClick={() => setZoomLevel((prev) => Math.min(prev + 0.2, 1.8))}
@@ -522,7 +525,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             </button>
           </div>
 
-          {/* Toggle Radar sweep */}
           <button
             onClick={() => setShowRadarSweep(!showRadarSweep)}
             className={`p-2 rounded-lg border text-xs font-medium transition-colors ${
@@ -536,7 +538,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
           </button>
         </div>
 
-        {/* Map Legend (Bottom Right) */}
+        {/* Map Legend */}
         <div 
           id="map-legend"
           className="absolute bottom-4 right-4 bg-slate-900/90 border border-slate-800/90 rounded-lg px-3.5 py-2.5 shadow-md backdrop-blur-sm text-xs space-y-1.5 z-10"
@@ -555,10 +557,6 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
             <span className="text-slate-300">Anomaly</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-            <span className="text-slate-300">Offline</span>
           </div>
         </div>
       </div>

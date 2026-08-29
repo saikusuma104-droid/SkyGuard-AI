@@ -3,6 +3,7 @@ import {
   LayoutDashboard, 
   Radio, 
   AlertTriangle, 
+  Database,
   Info,
   ShieldAlert, 
   LogOut
@@ -36,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badgeColor?: string;
   }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'stations', label: 'Stations', icon: Radio, badge: totalStationsCount },
+    { id: 'stations', label: 'Live Monitoring', icon: Radio, badge: totalStationsCount },
     { 
       id: 'anomalies', 
       label: 'Anomalies', 
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' 
         : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
     },
+    { id: 'history', label: 'Historical Telemetry', icon: Database },
     { id: 'about', label: 'About / System', icon: Info },
   ];
 
@@ -158,29 +160,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* System Status Footer */}
-      <div className="p-3.5 m-3 mt-0 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-2 text-xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-[11px] font-semibold text-slate-200">AWS Telemetry Hub</span>
-          </div>
-          <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-            ONLINE
-          </span>
-        </div>
-
-        <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80 font-mono">
-          <span>Sync Cycle</span>
-          <span className="text-emerald-400 font-bold">1 Hour</span>
-        </div>
-
-        <div className="text-[10px] text-slate-400 flex items-center justify-between font-mono">
-          <span>AI Model</span>
-          <span className="text-sky-400 font-bold">v2.4 SIH</span>
-        </div>
+      <div className="p-3 m-3 mt-0 rounded-xl bg-slate-900/90 border border-slate-800/80 flex items-center justify-between text-xs">
+        <span className="text-slate-400 text-[11px]">System Status</span>
+        <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          ACTIVE
+        </span>
       </div>
     </aside>
   );

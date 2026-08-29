@@ -5,7 +5,8 @@ import {
   Clock, 
   LogOut,
   ShieldCheck,
-  Radio
+  Radio,
+  Play
 } from 'lucide-react';
 import { AWSStation, AuthUser } from '../types';
 
@@ -18,6 +19,7 @@ interface HeaderProps {
   onLogout?: () => void;
   lastRefreshedAt?: string;
   onTriggerHourlyRefresh?: () => void;
+  onOpenDemoModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   lastRefreshedAt,
   onTriggerHourlyRefresh,
+  onOpenDemoModal,
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,35 +58,35 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header 
       id="main-app-header" 
-      className="h-16 bg-[#0F172A]/95 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 flex items-center justify-between z-20 sticky top-0 gap-4"
+      className="h-16 bg-[#0F172A]/95 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 flex items-center justify-between z-40 sticky top-0 gap-4"
     >
-      {/* Left: Branding & Status Subtitle */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex items-center gap-2">
+      {/* Left: Branding & Station Counter Badge */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2.5">
           <span className="font-bold text-base text-white tracking-tight font-['Plus_Jakarta_Sans'] whitespace-nowrap">
             SkyGuard <span className="text-sky-400">AI</span>
           </span>
-          <span className="hidden md:inline-block text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700/80 whitespace-nowrap">
-            7 AWS Live Telemetry
+          <span className="hidden xl:inline-block text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800">
+            7 Weather Stations
           </span>
         </div>
       </div>
 
       {/* Center: Search / Quick Station Lookup */}
-      <div className="flex-1 max-w-md relative hidden sm:block">
+      <div className="flex-1 max-w-sm relative hidden sm:block mx-2">
         <div className="relative w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             id="station-search-input"
             type="text"
-            placeholder="Search AWS-ID or city (e.g. AWS-001)..."
+            placeholder="Search station (e.g. station_01)..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setIsSearchOpen(true);
             }}
             onFocus={() => setIsSearchOpen(true)}
-            className="w-full pl-9 pr-8 py-1.5 bg-slate-900/90 text-xs text-slate-200 placeholder-slate-400 rounded-lg border border-slate-800 focus:outline-none focus:border-sky-500/60 focus:ring-1 focus:ring-sky-500/30 transition-all font-mono"
+            className="w-full pl-9 pr-8 py-1.5 bg-slate-900/90 text-xs text-slate-200 placeholder-slate-500 rounded-xl border border-slate-800 focus:outline-none focus:border-sky-500/60 focus:ring-1 focus:ring-sky-500/30 transition-all font-mono"
           />
           {searchQuery && (
             <button 
@@ -99,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
         {isSearchOpen && filteredStations.length > 0 && (
           <div 
             id="station-search-results"
-            className="absolute top-full left-0 right-0 mt-1 bg-[#0F172A] border border-slate-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-72 overflow-y-auto divide-y divide-slate-800/60"
+            className="absolute top-full left-0 right-0 mt-1.5 bg-[#0F172A] border border-slate-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-72 overflow-y-auto divide-y divide-slate-800/60 backdrop-blur-xl"
           >
             {filteredStations.map((station) => (
               <button
@@ -155,11 +158,24 @@ export const Header: React.FC<HeaderProps> = ({
         {onTriggerHourlyRefresh && (
           <button
             onClick={onTriggerHourlyRefresh}
-            title="Refresh Live Telemetry Feed"
+            title="Refresh Telemetry Feed"
             className="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5 text-xs font-mono shadow-sm"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Refresh</span>
+          </button>
+        )}
+
+        {/* Demo Mode Action */}
+        {onOpenDemoModal && (
+          <button
+            id="header-demo-btn"
+            onClick={onOpenDemoModal}
+            title="Open Demo Mode"
+            className="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/40 transition-all flex items-center gap-1.5 text-xs font-mono shadow-sm"
+          >
+            <Play className="w-3.5 h-3.5 fill-current text-cyan-400" />
+            <span className="hidden sm:inline">Demo</span>
           </button>
         )}
 
@@ -169,17 +185,16 @@ export const Header: React.FC<HeaderProps> = ({
           <span>{timeStr}</span>
         </div>
 
-        {/* Real Telemetry Indicator Badge */}
+        {/* System Active Indicator Badge */}
         <div 
           id="header-live-indicator"
           className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="text-[11px] font-bold font-mono tracking-wider text-emerald-400 hidden sm:inline">
-            LIVE TELEMETRY
+            SYSTEM ACTIVE
           </span>
         </div>
 

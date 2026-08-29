@@ -42,6 +42,10 @@ public class WeatherRequest {
     @JsonAlias({"sea_level_pressure", "seaLevelPressure"})
     private double seaLevelPressure;
 
+    @JsonProperty("dataSource")
+    @JsonAlias({"data_source", "dataSource"})
+    private String dataSource;
+
     public String getStationId() {
         return stationId;
     }
@@ -120,5 +124,13 @@ public class WeatherRequest {
 
     public void setSeaLevelPressure(double seaLevelPressure) {
         this.seaLevelPressure = seaLevelPressure;
+    }
+
+    public String getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
     }
 }

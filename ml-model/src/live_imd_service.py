@@ -14,143 +14,87 @@ from src.predict import predict
 TRAINED_STATIONS_CONFIG = [
     {
         "model_id": "station_01",
-        "id": "AWS-001",
-        "name": "Thiruvananthapuram Observatory AWS",
+        "id": "station_01",
+        "name": "Thiruvananthapuram",
         "location": "Thiruvananthapuram",
         "state": "Kerala",
         "lat": 8.5241,
         "lng": 76.9366,
         "elevationM": 60,
         "stationType": "Coastal Observatory",
-        "installYear": 2022,
-        "expectedReadings": {
-            "temperature": 29.5,
-            "pressure": 1011.2,
-            "humidity": 82,
-            "tempTolerance": 2.0,
-            "pressureTolerance": 2.5,
-            "humidityTolerance": 10
-        }
+        "installYear": 2022
     },
     {
         "model_id": "station_02",
-        "id": "AWS-002",
-        "name": "Tirupati Temple AWS",
+        "id": "station_02",
+        "name": "Tirupati",
         "location": "Tirupati",
         "state": "Andhra Pradesh",
         "lat": 13.6288,
         "lng": 79.4192,
         "elevationM": 160,
         "stationType": "Primary Synoptic",
-        "installYear": 2023,
-        "expectedReadings": {
-            "temperature": 32.0,
-            "pressure": 1008.5,
-            "humidity": 65,
-            "tempTolerance": 2.0,
-            "pressureTolerance": 2.5,
-            "humidityTolerance": 10
-        }
+        "installYear": 2023
     },
     {
         "model_id": "station_03",
-        "id": "AWS-003",
-        "name": "Bhadrachalam Godavari AWS",
+        "id": "station_03",
+        "name": "Bhadrachalam",
         "location": "Bhadrachalam",
         "state": "Telangana",
         "lat": 17.6688,
         "lng": 80.8928,
         "elevationM": 50,
         "stationType": "River Basin AWS",
-        "installYear": 2020,
-        "expectedReadings": {
-            "temperature": 33.5,
-            "pressure": 1004.0,
-            "humidity": 30.0,
-            "tempTolerance": 2.5,
-            "pressureTolerance": 3.0,
-            "humidityTolerance": 12
-        }
+        "installYear": 2020
     },
     {
         "model_id": "station_04",
-        "id": "AWS-004",
-        "name": "Nalgonda Deccan AWS",
+        "id": "station_04",
+        "name": "Nalgonda",
         "location": "Nalgonda",
         "state": "Telangana",
         "lat": 17.0577,
         "lng": 79.2684,
         "elevationM": 230,
         "stationType": "Semi-Arid AWS",
-        "installYear": 2023,
-        "expectedReadings": {
-            "temperature": 33.2,
-            "pressure": 1006.0,
-            "humidity": 55,
-            "tempTolerance": 2.0,
-            "pressureTolerance": 3.0,
-            "humidityTolerance": 10
-        }
+        "installYear": 2023
     },
     {
         "model_id": "station_05",
-        "id": "AWS-005",
-        "name": "Tuni Coastal AWS",
+        "id": "station_05",
+        "name": "Tuni",
         "location": "Tuni",
         "state": "Andhra Pradesh",
         "lat": 17.3573,
         "lng": 82.5443,
         "elevationM": 15,
         "stationType": "Coastal AWS",
-        "installYear": 2024,
-        "expectedReadings": {
-            "temperature": 31.0,
-            "pressure": 1010.0,
-            "humidity": 78,
-            "tempTolerance": 2.0,
-            "pressureTolerance": 3.0,
-            "humidityTolerance": 10
-        }
+        "installYear": 2024
     },
     {
         "model_id": "station_06",
-        "id": "AWS-006",
-        "name": "Kurnool Rayalaseema AWS",
+        "id": "station_06",
+        "name": "Kurnool",
         "location": "Kurnool",
         "state": "Andhra Pradesh",
         "lat": 15.8281,
         "lng": 78.0373,
         "elevationM": 275,
         "stationType": "Rayalaseema AWS",
-        "installYear": 2021,
-        "expectedReadings": {
-            "temperature": 33.8,
-            "pressure": 1003.5,
-            "humidity": 50,
-            "tempTolerance": 2.0,
-            "pressureTolerance": 3.0,
-            "humidityTolerance": 8
-        }
+        "installYear": 2021
     },
     {
         "model_id": "station_07",
-        "id": "AWS-007",
-        "name": "Coonoor Nilgiris Hill AWS",
+        "id": "station_07",
+        "name": "Coonoor",
         "location": "Coonoor",
         "state": "Tamil Nadu",
         "lat": 11.3530,
         "lng": 76.7959,
         "elevationM": 1850,
         "stationType": "High-Altitude Hill AWS",
-        "installYear": 2022,
-        "expectedReadings": {
-            "temperature": 19.5,
-            "pressure": 825.0,
-            "humidity": 70,
-            "tempTolerance": 2.5,
-            "pressureTolerance": 4.0,
-            "humidityTolerance": 12
-        }
+        "installYear": 2022
     }
 ]
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   NavigationSection, 
   AWSStation, 
@@ -18,10 +18,12 @@ import { IndiaMap } from './components/IndiaMap';
 import { RecentAnomalies } from './components/RecentAnomalies';
 import { AnomalyDetailModal } from './components/AnomalyDetailModal';
 import { StationDetailModal } from './components/StationDetailModal';
+import { DemoModal } from './components/DemoModal';
 
 // Active View Components
 import { AllAnomaliesView } from './components/AllAnomaliesView';
 import { StationsListView } from './components/StationsListView';
+import { HistoricalDataView } from './components/HistoricalDataView';
 import { AboutView } from './components/AboutView';
 
 export default function App() {
@@ -43,12 +45,31 @@ export default function App() {
   const [selectedAnomaly, setSelectedAnomaly] = useState<AnomalyRecord | null>(null);
   const [isStationModalOpen, setIsStationModalOpen] = useState(false);
   const [isAnomalyModalOpen, setIsAnomalyModalOpen] = useState(false);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+
+  // Demo Simulation Result state to display on Dashboard UI
+  const [demoResult, setDemoResult] = useState<{
+    stationId: string;
+    temperature: number;
+    pressure: number;
+    humidity: number;
+    status: string;
+    anomalyScore: number;
+    reason: string;
+    timestamp: string;
+  } | null>(null);
   
   // Filter on Dashboard Map & Stats
   const [selectedFilter, setSelectedFilter] = useState<StationStatus | 'all'>('all');
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
 
+  // Guard against concurrent duplicate refresh triggers
+  const isRefreshingRef = useRef<boolean>(false);
+
   const handleTriggerHourlyRefresh = async (showToast = true) => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+
     try {
       const liveReadings = await fetchDirectOpenMeteoDataFor7Stations(stations);
       const timeNow = new Date().toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
@@ -67,46 +88,53 @@ export default function App() {
           const press = live.pressure;
           const hum = live.humidity;
 
+          // Calculate Sea Level Pressure based on station elevation for high-altitude nodes like Coonoor (1850m)
+          const elevation = origStation.elevationM || 0;
+          const seaLevelPress = elevation > 0 
+            ? Math.round(press * Math.pow(1 - (0.0065 * elevation) / 288.15, -5.255) * 10) / 10
+            : press;
+
           // Perform backend / ML anomaly check for live telemetry
           const mlResult = await checkAnomaly({
             stationId: origStation.id,
             timestamp: timeNow,
             temperature: temp,
             dewPointTemperature: Math.round((temp - (100 - hum) / 5) * 10) / 10,
-            pressure: press,
+            stationLevelPressure: press,
+            seaLevelPressure: seaLevelPress,
             relativeHumidity: hum,
             windSpeed: live.windSpeed || 2.5,
+            visibility: 10.0,
           });
 
-          const isAnomaly = mlResult.anomaly || mlResult.severity === 'CRITICAL' || mlResult.severity === 'HIGH';
-          const isSuspicious = !isAnomaly && (mlResult.severity === 'MEDIUM' || temp > 43.0 || press < 970.0 || press > 1035.0);
-
+          const isAnomaly = mlResult.anomaly === true || mlResult.status === 'ANOMALY';
+          const isSuspicious = !isAnomaly && mlResult.status === 'WARNING';
           const status: StationStatus = isAnomaly ? 'anomaly' : isSuspicious ? 'suspicious' : 'healthy';
 
           let anomalyRecord: AnomalyRecord | undefined = undefined;
-          if (isAnomaly || isSuspicious) {
+          if (isAnomaly) {
             anomalyRecord = {
               id: `ANOM-${origStation.id}-${Date.now()}`,
               stationId: origStation.id,
               stationName: origStation.name,
               location: origStation.location,
               state: origStation.state,
-              parameter: temp > 43 ? 'temperature' : press < 970 ? 'pressure' : 'multi_sensor',
-              title: mlResult.severity === 'CRITICAL' ? 'Thermodynamic Limit Violation' : 'Telemetry Variance Flag',
-              classification: 'Hybrid Rule + Isolation Forest Detection',
-              actualValue: `${temp}°C / ${press} hPa / ${hum}%`,
-              expectedValue: `Normal Range: 15-42°C | 980-1030hPa`,
-              anomalyScore: mlResult.anomaly_score || (isAnomaly ? -0.15 : 0.10),
-              confidence: isAnomaly ? 95 : 85,
-              severity: (mlResult.severity as any) || (isAnomaly ? 'CRITICAL' : 'MEDIUM'),
+              parameter: temp > 45 || temp < -10 ? 'temperature' : press < 800 || press > 1080 ? 'pressure' : 'multi_sensor',
+              title: 'Weather Parameter Anomaly',
+              classification: 'Isolation Forest Anomaly Detection',
+              actualValue: `${temp}°C / ${press} hPa / ${hum}% RH`,
+              expectedValue: 'Expected Station Baseline',
+              anomalyScore: mlResult.anomaly_score !== undefined ? mlResult.anomaly_score : 50.0,
+              confidence: 95,
+              severity: 'CRITICAL',
               timestamp: timeNow,
-              reason: mlResult.reason || `Telemetry check at ${timeNow}.`,
-              rootCauseHypothesis: 'Environmental boundary shift or sensor calibration drift.',
-              physicalLawValidation: 'Validated against thermodynamic reference limits.',
-              recommendation: 'Inspect station telemetry and run physical transducer audit.',
+              reason: mlResult.reason || `Anomaly score: ${mlResult.anomaly_score?.toFixed(1)}/100`,
+              rootCauseHypothesis: 'Parameter departure from expected operating range.',
+              physicalLawValidation: 'Physical parameter check.',
+              recommendation: 'Inspect station reading and sensor accuracy.',
               status: 'active',
               nearestNeighbors: [],
-              historicalContext: 'Evaluated against hybrid Rule Engine and Isolation Forest model.',
+              historicalContext: 'Isolation Forest Model Detection',
             };
             newAnomalies.push(anomalyRecord);
           }
@@ -118,7 +146,7 @@ export default function App() {
           return {
             ...origStation,
             status,
-            trustScore: isAnomaly ? 25 : isSuspicious ? 70 : 100,
+            trustScore: status === 'anomaly' ? 25 : status === 'suspicious' ? 70 : 100,
             lastPing: timeNow,
             lastPacketReceivedAgo: 'Just now',
             currentReadings: {
@@ -158,6 +186,8 @@ export default function App() {
       }
     } catch (e) {
       console.error('Hourly live refresh error:', e);
+    } finally {
+      isRefreshingRef.current = false;
     }
   };
 
@@ -204,6 +234,62 @@ export default function App() {
     setTimeout(() => setNotificationToast(null), 5000);
   };
 
+  const handleSimulateDemo = async (data: {
+    stationId: string;
+    temperature: number;
+    pressure: number;
+    humidity: number;
+  }) => {
+    const result = await checkAnomaly({
+      stationId: data.stationId,
+      temperature: data.temperature,
+      stationLevelPressure: data.pressure,
+      relativeHumidity: data.humidity,
+      dataSource: 'DEMO',
+    });
+
+    const statusStr = result.status || (result.anomaly ? 'ANOMALY' : 'NORMAL');
+    const timeNow = new Date().toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
+
+    setDemoResult({
+      stationId: data.stationId,
+      temperature: data.temperature,
+      pressure: data.pressure,
+      humidity: data.humidity,
+      status: statusStr,
+      anomalyScore: result.anomaly_score !== undefined ? result.anomaly_score : (result.anomaly ? 85.0 : 0.0),
+      reason: result.reason || 'Hybrid Detector evaluation complete.',
+      timestamp: timeNow,
+    });
+
+    setIsDemoModalOpen(false);
+
+    setStations((prevStations) =>
+      prevStations.map((st) => {
+        if (st.id === data.stationId) {
+          const isAnomaly = statusStr === 'ANOMALY' || result.anomaly;
+          const isWarning = !isAnomaly && statusStr === 'WARNING';
+          const stStatus: StationStatus = isAnomaly ? 'anomaly' : isWarning ? 'suspicious' : 'healthy';
+
+          return {
+            ...st,
+            status: stStatus,
+            trustScore: isAnomaly ? 25 : isWarning ? 70 : 100,
+            currentReadings: {
+              ...st.currentReadings,
+              temperature: data.temperature,
+              pressure: data.pressure,
+              humidity: data.humidity,
+            },
+          };
+        }
+        return st;
+      })
+    );
+
+    handleActionComplete(`Demo simulation stored in PostgreSQL for ${data.stationId}`);
+  };
+
   // If not authenticated, present Login Screen
   if (!currentUser) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
@@ -233,6 +319,7 @@ export default function App() {
           onLogout={handleLogout}
           lastRefreshedAt={lastRefreshedAt}
           onTriggerHourlyRefresh={() => handleTriggerHourlyRefresh(true)}
+          onOpenDemoModal={() => setIsDemoModalOpen(true)}
         />
 
         {/* Action / Notification Toast */}
@@ -247,6 +334,68 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {currentSection === 'dashboard' && (
             <div className="space-y-6 max-w-7xl mx-auto">
+              {/* DEMO MODE Active Result Banner */}
+              {demoResult && (
+                <div id="demo-mode-result-card" className="bg-slate-900/90 border border-cyan-500/40 rounded-2xl p-5 shadow-2xl backdrop-blur-md relative animate-fade-in space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400">
+                        DEMO MODE
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/60">
+                        Persisted in PostgreSQL ({demoResult.timestamp})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setDemoResult(null)}
+                      className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                      title="Dismiss Demo Result Card"
+                    >
+                      Dismiss ×
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-xs font-mono">
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[10px]">Station</span>
+                      <span className="text-cyan-300 font-bold text-sm">{demoResult.stationId}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[10px]">Temperature</span>
+                      <span className="text-slate-200 text-sm font-semibold">{demoResult.temperature} °C</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[10px]">Pressure</span>
+                      <span className="text-slate-200 text-sm font-semibold">{demoResult.pressure} hPa</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[10px]">Humidity</span>
+                      <span className="text-slate-200 text-sm font-semibold">{demoResult.humidity} %</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[10px]">Status</span>
+                      <span className={`font-bold px-2.5 py-1 rounded text-xs uppercase inline-block mt-0.5 ${
+                        demoResult.status === 'ANOMALY' ? 'bg-rose-950 text-rose-300 border border-rose-800' :
+                        demoResult.status === 'WARNING' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
+                        'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      }`}>
+                        {demoResult.status}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[10px]">Anomaly Score</span>
+                      <span className="text-slate-200 font-bold text-sm">{demoResult.anomalyScore.toFixed(1)}/100</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800/80">
+                    <span className="text-slate-500 block uppercase text-[10px]">Reason</span>
+                    <p className="text-slate-200 font-sans text-xs mt-1 leading-relaxed">{demoResult.reason}</p>
+                  </div>
+                </div>
+              )}
+
               {/* 1. Network Overview Statistics (4 Cards) */}
               <NetworkStats
                 stats={stats}
@@ -302,6 +451,15 @@ export default function App() {
             </div>
           )}
 
+          {currentSection === 'history' && (
+            <div className="max-w-7xl mx-auto">
+              <HistoricalDataView
+                stations={stations}
+                onBackToDashboard={() => setCurrentSection('dashboard')}
+              />
+            </div>
+          )}
+
           {currentSection === 'about' && (
             <div className="max-w-7xl mx-auto">
               <AboutView
@@ -340,6 +498,15 @@ export default function App() {
               setIsAnomalyModalOpen(true);
             }
           }}
+        />
+      )}
+
+      {/* Demo Mode Modal */}
+      {isDemoModalOpen && (
+        <DemoModal
+          stations={stations}
+          onClose={() => setIsDemoModalOpen(false)}
+          onSimulate={handleSimulateDemo}
         />
       )}
     </div>

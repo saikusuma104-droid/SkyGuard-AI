@@ -4,8 +4,8 @@ export const INITIAL_ANOMALIES: AnomalyRecord[] = [];
 
 export const STATIONS: AWSStation[] = [
   {
-    id: 'AWS-001',
-    name: 'Thiruvananthapuram Observatory AWS',
+    id: 'station_01',
+    name: 'Thiruvananthapuram',
     location: 'Thiruvananthapuram',
     state: 'Kerala',
     lat: 8.5241,
@@ -47,8 +47,8 @@ export const STATIONS: AWSStation[] = [
     installYear: 2022,
   },
   {
-    id: 'AWS-002',
-    name: 'Tirupati Temple AWS',
+    id: 'station_02',
+    name: 'Tirupati',
     location: 'Tirupati',
     state: 'Andhra Pradesh',
     lat: 13.6288,
@@ -90,8 +90,8 @@ export const STATIONS: AWSStation[] = [
     installYear: 2023,
   },
   {
-    id: 'AWS-003',
-    name: 'Bhadrachalam Godavari AWS',
+    id: 'station_03',
+    name: 'Bhadrachalam',
     location: 'Bhadrachalam',
     state: 'Telangana',
     lat: 17.6688,
@@ -133,8 +133,8 @@ export const STATIONS: AWSStation[] = [
     installYear: 2020,
   },
   {
-    id: 'AWS-004',
-    name: 'Nalgonda Deccan AWS',
+    id: 'station_04',
+    name: 'Nalgonda',
     location: 'Nalgonda',
     state: 'Telangana',
     lat: 17.0577,
@@ -176,8 +176,8 @@ export const STATIONS: AWSStation[] = [
     installYear: 2023,
   },
   {
-    id: 'AWS-005',
-    name: 'Tuni Coastal AWS',
+    id: 'station_05',
+    name: 'Tuni',
     location: 'Tuni',
     state: 'Andhra Pradesh',
     lat: 17.3573,
@@ -219,8 +219,8 @@ export const STATIONS: AWSStation[] = [
     installYear: 2024,
   },
   {
-    id: 'AWS-006',
-    name: 'Kurnool Rayalaseema AWS',
+    id: 'station_06',
+    name: 'Kurnool',
     location: 'Kurnool',
     state: 'Andhra Pradesh',
     lat: 15.8281,
@@ -262,8 +262,8 @@ export const STATIONS: AWSStation[] = [
     installYear: 2021,
   },
   {
-    id: 'AWS-007',
-    name: 'Coonoor Nilgiris Hill AWS',
+    id: 'station_07',
+    name: 'Coonoor',
     location: 'Coonoor',
     state: 'Tamil Nadu',
     lat: 11.3530,

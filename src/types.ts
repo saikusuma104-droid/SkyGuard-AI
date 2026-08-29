@@ -119,6 +119,7 @@ export type NavigationSection =
   | 'dashboard'
   | 'stations'
   | 'anomalies'
+  | 'history'
   | 'about';
 
 export interface AuthUser {

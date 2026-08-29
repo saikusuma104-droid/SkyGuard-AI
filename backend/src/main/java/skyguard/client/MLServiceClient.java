@@ -1,7 +1,9 @@
 package skyguard.client;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import skyguard.dto.AnomalyResponse;
 import skyguard.dto.WeatherRequest;
@@ -22,7 +24,7 @@ public class MLServiceClient {
         try {
             return restTemplate.getForObject(ML_LIVE_URL, Object.class);
         } catch (Exception e) {
-            return null;
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "ML live service unavailable", e);
         }
     }
 
@@ -30,35 +32,30 @@ public class MLServiceClient {
         Map<String, Object> data = new HashMap<>();
 
         data.put("station_id", request.getStationId());
-        data.put("timestamp", request.getTimestamp() != null ? request.getTimestamp() : "2026-08-27 12:00:00");
+        data.put("timestamp", request.getTimestamp());
         data.put("temperature", request.getTemperature());
         data.put("dew_point_temperature", request.getDewPointTemperature());
-        data.put("station_level_pressure", request.getStationLevelPressure() != 0 ? request.getStationLevelPressure() : 1008.5);
-        data.put("sea_level_pressure", request.getSeaLevelPressure() != 0 ? request.getSeaLevelPressure() : 1010.0);
+        data.put("station_level_pressure", request.getStationLevelPressure());
+        data.put("sea_level_pressure", request.getSeaLevelPressure());
         data.put("wind_direction", request.getWindDirection());
         data.put("wind_speed", request.getWindSpeed());
         data.put("relative_humidity", request.getRelativeHumidity());
         data.put("visibility", request.getVisibility());
 
         try {
-            return restTemplate.postForObject(
+            AnomalyResponse response = restTemplate.postForObject(
                     ML_URL,
                     data,
                     AnomalyResponse.class
             );
+            if (response == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "ML detection service returned empty response");
+            }
+            return response;
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            // Fallback evaluation if FastAPI ML service is temporarily down
-            boolean isAnomaly = request.getTemperature() > 50.0 || request.getTemperature() < -20.0 || request.getRelativeHumidity() > 100.0;
-            double score = isAnomaly ? -0.15 : 0.10;
-            String severity = isAnomaly ? "CRITICAL" : "NORMAL";
-
-            return new AnomalyResponse(
-                    request.getStationId(),
-                    request.getTimestamp(),
-                    isAnomaly,
-                    score,
-                    severity
-            );
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "ML detection service unavailable: " + e.getMessage(), e);
         }
     }
 }

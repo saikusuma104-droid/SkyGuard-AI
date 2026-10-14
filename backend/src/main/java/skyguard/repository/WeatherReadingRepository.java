@@ -16,4 +16,12 @@ public interface WeatherReadingRepository extends JpaRepository<WeatherReading, 
     List<WeatherReading> findByTimestampBetween(LocalDateTime start, LocalDateTime end);
 
     List<WeatherReading> findByStationIdOrderByTimestampDesc(String stationId);
+
+    List<WeatherReading> findByStatusAndTimestampBetweenOrderByTimestampAsc(String status, LocalDateTime start, LocalDateTime end);
+
+    List<WeatherReading> findByStationIdAndStatusAndTimestampBetweenOrderByTimestampAsc(String stationId, String status, LocalDateTime start, LocalDateTime end);
+
+    List<WeatherReading> findByStatusOrderByTimestampAsc(String status);
+
+    List<WeatherReading> findByStationIdAndStatusOrderByTimestampAsc(String stationId, String status);
 }

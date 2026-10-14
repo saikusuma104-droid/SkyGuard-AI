@@ -22,6 +22,9 @@ public class AnomalyResponse {
     @JsonProperty("status")
     private String status;
 
+    @JsonProperty("confidence")
+    private double confidence = 0.85;
+
     @JsonProperty("reason")
     private String reason;
 
@@ -133,5 +136,13 @@ public class AnomalyResponse {
 
     public void setPhysicalValidation(Object physicalValidation) {
         this.physicalValidation = physicalValidation;
+    }
+
+    public double getConfidence() {
+        return confidence;
+    }
+
+    public void setConfidence(double confidence) {
+        this.confidence = confidence;
     }
 }
